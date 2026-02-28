@@ -380,6 +380,7 @@ export class DeckGLMap {
       this.rebuildDatacenterSupercluster();
       this.initDeck();
       this.loadCountryBoundaries();
+      this.fetchServerBases();
       this.render();
     });
 
