@@ -15976,3 +15976,8 @@ body.has-breaking-alert .panels-grid {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* ── Self-hosted overrides: hide branding & promo elements ── */
+.header { display: none !important; }
+.community-widget { display: none !important; }
+.wm-dl-panel { display: none !important; }

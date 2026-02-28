@@ -610,8 +610,9 @@ export class DataLoaderManager implements AppModule {
 
     this.ctx.allNews = collectedNews;
     this.ctx.initialLoadComplete = true;
-    maybeShowDownloadBanner();
-    mountCommunityWidget();
+    // Disabled for self-hosted deployment (no promo popups needed)
+    // maybeShowDownloadBanner();
+    // mountCommunityWidget();
     updateAndCheck([
       { type: 'news', region: 'global', count: collectedNews.length },
     ]).then(anomalies => {
