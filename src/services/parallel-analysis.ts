@@ -78,10 +78,8 @@ class ParallelAnalysisService {
   private analysisCount = 0;
 
   async analyzeHeadlines(clusters: ClusteredEvent[]): Promise<AnalysisReport> {
-    const startTime = performance.now();
-    this.analysisCount++;
 
-    console.group(`%c🔬 Parallel Analysis #${this.analysisCount}`, 'color: #6b8afd; font-weight: bold; font-size: 14px');
+    this.analysisCount++;
 
     const analyzed: AnalyzedHeadline[] = [];
     const titles = clusters.map(c => c.primaryTitle);
@@ -184,9 +182,6 @@ class ParallelAnalysisService {
     };
 
     this.lastReport = report;
-    this.logReport(report, performance.now() - startTime);
-    console.groupEnd();
-
     return report;
   }
 
@@ -499,9 +494,6 @@ class ParallelAnalysisService {
 
   private async getEmbeddings(titles: string[]): Promise<number[][]> {
     return mlWorker.embedTexts(titles);
-  }
-
-  private logReport(_report: AnalysisReport, _durationMs: number): void {
   }
 
   getLastReport(): AnalysisReport | null {

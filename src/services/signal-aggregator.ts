@@ -451,5 +451,3 @@ class SignalAggregator {
 
 export const signalAggregator = new SignalAggregator();
 
-export function logSignalSummary(): void {
-}

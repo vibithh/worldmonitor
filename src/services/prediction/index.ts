@@ -54,13 +54,6 @@ const client = new PredictionServiceClient('', { fetch: (...args) => globalThis.
 // Cloudflare blocks server-side TLS but browsers pass JA3 fingerprint checks
 let directFetchWorks: boolean | null = null;
 let directFetchProbe: Promise<boolean> | null = null;
-let loggedDirectFetchBlocked = false;
-
-function logDirectFetchBlockedOnce(): void {
-  if (loggedDirectFetchBlocked) return;
-  loggedDirectFetchBlocked = true;
-}
-
 async function probeDirectFetchCapability(): Promise<boolean> {
   if (directFetchWorks !== null) return directFetchWorks;
   if (!directFetchProbe) {
@@ -69,14 +62,10 @@ async function probeDirectFetchCapability(): Promise<boolean> {
     })
       .then(resp => {
         directFetchWorks = resp.ok;
-        if (!directFetchWorks) {
-          logDirectFetchBlockedOnce();
-        }
         return directFetchWorks;
       })
       .catch(() => {
         directFetchWorks = false;
-        logDirectFetchBlockedOnce();
         return false;
       })
       .finally(() => {
@@ -102,7 +91,6 @@ async function polyFetch(endpoint: 'events' | 'markets', params: Record<string, 
       }
     } catch {
       directFetchWorks = false;
-      logDirectFetchBlockedOnce();
     }
   }
 
