@@ -82,8 +82,8 @@ import { getAiFlowSettings } from '@/services/ai-flow-settings';
 import { t } from '@/services/i18n';
 import { getHydratedData } from '@/services/bootstrap';
 import type { GetSectorSummaryResponse } from '@/generated/client/worldmonitor/market/v1/service_client';
-import { maybeShowDownloadBanner } from '@/components/DownloadBanner';
-import { mountCommunityWidget } from '@/components/CommunityWidget';
+// import { maybeShowDownloadBanner } from '@/components/DownloadBanner';
+// import { mountCommunityWidget } from '@/components/CommunityWidget';
 import { ResearchServiceClient } from '@/generated/client/worldmonitor/research/v1/service_client';
 import {
   MarketPanel,
