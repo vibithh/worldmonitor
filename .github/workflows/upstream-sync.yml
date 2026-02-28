@@ -1,0 +1,59 @@
+name: Sync upstream
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch and merge upstream
+        run: |
+          git remote add upstream https://github.com/koala73/worldmonitor.git || true
+          git fetch upstream main
+          BEHIND=$(git rev-list HEAD..upstream/main --count)
+          if [ "$BEHIND" = "0" ]; then
+            echo "Already up to date with upstream"
+            echo "UP_TO_DATE=true" >> $GITHUB_ENV
+            exit 0
+          fi
+          echo "Behind upstream by $BEHIND commits"
+          git merge upstream/main --no-edit || {
+            echo "MERGE_CONFLICT=true" >> $GITHUB_ENV
+            git merge --abort
+          }
+
+      - name: Push if clean merge
+        if: env.UP_TO_DATE != 'true' && env.MERGE_CONFLICT != 'true'
+        run: git push origin main
+
+      - name: Create PR on conflict
+        if: env.MERGE_CONFLICT == 'true'
+        run: |
+          git checkout -b upstream-sync-$(date +%Y%m%d)
+          git merge upstream/main --no-edit || true
+          git add -A
+          git commit -m "sync: merge upstream (conflicts need resolution)" || true
+          git push origin HEAD
+          gh pr create \
+            --title "sync: upstream worldmonitor (conflicts)" \
+            --body "Automatic upstream sync found merge conflicts. Please resolve manually." \
+            --base main \
+            --head upstream-sync-$(date +%Y%m%d) || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
