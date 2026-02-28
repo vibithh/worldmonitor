@@ -19,6 +19,7 @@
     "build:tech": "cross-env-shell VITE_VARIANT=tech \"tsc && vite build\"",
     "build:finance": "cross-env-shell VITE_VARIANT=finance \"tsc && vite build\"",
     "build:happy": "cross-env-shell VITE_VARIANT=happy \"tsc && vite build\"",
+    "check:relay": "node scripts/check-relay.mjs",
     "typecheck": "tsc --noEmit",
     "typecheck:api": "tsc --noEmit -p tsconfig.api.json",
     "typecheck:all": "tsc --noEmit && tsc --noEmit -p tsconfig.api.json",

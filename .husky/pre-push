@@ -1,3 +1,6 @@
+echo "Running relay check..."
+npm run check:relay || exit 1
+
 echo "Running type check..."
 npm run typecheck || exit 1
 
