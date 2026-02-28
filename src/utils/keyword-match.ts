@@ -4,6 +4,7 @@ export interface TokenizedTitle {
 }
 
 const INFLECTION_SUFFIXES = ['s', 'es', 'ian', 'ean', 'an', 'n', 'i', 'ish', 'ese'];
+const MIN_SUFFIX_KEYWORD_LEN = 4;
 
 export function tokenizeForMatch(title: string): TokenizedTitle {
   const lower = title.toLowerCase();
@@ -37,8 +38,15 @@ function hasSuffix(word: string, keyword: string): boolean {
   return false;
 }
 
+function wordMatches(token: string, kwPart: string): boolean {
+  if (token === kwPart) return true;
+  if (kwPart.length >= MIN_SUFFIX_KEYWORD_LEN) return hasSuffix(token, kwPart);
+  return false;
+}
+
 function matchSingleWord(words: Set<string>, keyword: string): boolean {
   if (words.has(keyword)) return true;
+  if (keyword.length < MIN_SUFFIX_KEYWORD_LEN) return false;
   for (const word of words) {
     if (hasSuffix(word, keyword)) return true;
   }
@@ -53,7 +61,7 @@ export function matchKeyword(tokens: TokenizedTitle, keyword: string): boolean {
   for (let i = 0; i <= ordered.length - parts.length; i++) {
     let match = true;
     for (let j = 0; j < parts.length; j++) {
-      if (ordered[i + j] !== parts[j]) { match = false; break; }
+      if (!wordMatches(ordered[i + j]!, parts[j]!)) { match = false; break; }
     }
     if (match) return true;
   }

@@ -198,6 +198,18 @@ describe('inflection suffix matching', () => {
     assert.ok(!matchKeyword(t, 'cris'));
     assert.ok(!matchKeyword(t, 'esca'));
   });
+
+  it('short keywords (<4 chars) do NOT suffix-match', () => {
+    assert.ok(!matchKeyword(tokenizeForMatch('AIS signals disrupted'), 'ai'));
+    assert.ok(!matchKeyword(tokenizeForMatch('Russia uses drones'), 'us'));
+    assert.ok(!matchKeyword(tokenizeForMatch('The bus arrived'), 'bu'));
+  });
+
+  it('short keywords still exact-match', () => {
+    assert.ok(matchKeyword(tokenizeForMatch('AI revolution continues'), 'ai'));
+    assert.ok(matchKeyword(tokenizeForMatch('US announces deal'), 'us'));
+    assert.ok(matchKeyword(tokenizeForMatch('HTS forces advance'), 'hts'));
+  });
 });
 
 // --- Multi-word phrases ---
@@ -221,6 +233,16 @@ describe('multi-word phrase matching', () => {
   it('"silicon valley" matches multi-word', () => {
     const t = tokenizeForMatch('Silicon Valley startups surge');
     assert.ok(matchKeyword(t, 'silicon valley'));
+  });
+
+  it('"South Korean" matches "south korea" (multi-word demonym)', () => {
+    const t = tokenizeForMatch('South Korean military drills continue');
+    assert.ok(matchKeyword(t, 'south korea'));
+  });
+
+  it('"North Korean" matches "north korea" (multi-word demonym)', () => {
+    const t = tokenizeForMatch('North Korean missile launch detected');
+    assert.ok(matchKeyword(t, 'north korea'));
   });
 
   it('"tech layoffs" matches multi-word', () => {
