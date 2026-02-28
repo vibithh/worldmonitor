@@ -84,7 +84,7 @@ export const OPTIONAL_LIVE_CHANNELS: LiveChannel[] = [
   { id: 'newsmax', name: 'Newsmax', handle: '@NEWSMAX', fallbackVideoId: 'S-lFBzloL2Y', useFallbackOnly: true },
   { id: 'abc-news', name: 'ABC News', handle: '@ABCNews' },
   { id: 'cbs-news', name: 'CBS News', handle: '@CBSNews', fallbackVideoId: 'R9L8sDK8iEc' },
-  { id: 'nbc-news', name: 'NBC News', handle: '@NBCNews' },
+  { id: 'nbc-news', name: 'NBC News', handle: '@NBCNews', fallbackVideoId: 'yMr0neQhu6c' },
   { id: 'cbc-news', name: 'CBC News', handle: '@CBCNews', fallbackVideoId: '5vfaDsMhCF4' },
   // Europe
   { id: 'bbc-news', name: 'BBC News', handle: '@BBCNews', fallbackVideoId: 'bjgQzJzCZKs' },
