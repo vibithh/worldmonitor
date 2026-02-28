@@ -3820,7 +3820,7 @@ export class DeckGLMap {
 
   /** Get news items related to a hotspot by keyword matching */
   private getRelatedNews(hotspot: Hotspot): NewsItem[] {
-    const conflictTopics = ['gaza', 'ukraine', 'russia', 'israel', 'iran', 'china', 'taiwan', 'korea', 'syria'];
+    const conflictTopics = ['gaza', 'ukraine', 'ukrainian', 'russia', 'russian', 'israel', 'israeli', 'iran', 'iranian', 'china', 'chinese', 'taiwan', 'taiwanese', 'korea', 'korean', 'syria', 'syrian'];
 
     return this.news
       .map((item) => {

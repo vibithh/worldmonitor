@@ -1,51 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-
-// Direct import from source (Vite alias not available in Node test runner)
-const MOD_PATH = '../src/utils/keyword-match.ts';
-
-// We can't import .ts directly; inline the functions for testing
-function tokenizeForMatch(title) {
-  const lower = title.toLowerCase();
-  const words = new Set();
-  const ordered = [];
-  for (const raw of lower.split(/\s+/)) {
-    const cleaned = raw.replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, '');
-    if (!cleaned) continue;
-    words.add(cleaned);
-    ordered.push(cleaned);
-    for (const part of cleaned.split(/[^a-z0-9]+/)) {
-      if (part) words.add(part);
-    }
-  }
-  return { words, ordered };
-}
-
-function matchKeyword(tokens, keyword) {
-  const parts = keyword.toLowerCase().split(/\s+/).filter(w => w.length > 0);
-  if (parts.length === 0) return false;
-  if (parts.length === 1) return tokens.words.has(parts[0]);
-  const { ordered } = tokens;
-  for (let i = 0; i <= ordered.length - parts.length; i++) {
-    let match = true;
-    for (let j = 0; j < parts.length; j++) {
-      if (ordered[i + j] !== parts[j]) { match = false; break; }
-    }
-    if (match) return true;
-  }
-  return false;
-}
-
-function matchesAnyKeyword(tokens, keywords) {
-  for (const kw of keywords) {
-    if (matchKeyword(tokens, kw)) return true;
-  }
-  return false;
-}
-
-function findMatchingKeywords(tokens, keywords) {
-  return keywords.filter(kw => matchKeyword(tokens, kw));
-}
+import { tokenizeForMatch, matchKeyword, matchesAnyKeyword, findMatchingKeywords } from '../src/utils/keyword-match.ts';
 
 // --- Tokenizer tests ---
 
@@ -195,6 +150,56 @@ describe('possessive matching', () => {
   });
 });
 
+// --- Inflection / suffix matching (plurals, demonyms) ---
+
+describe('inflection suffix matching', () => {
+  it('"houthis" matches keyword "houthi" (plural -s)', () => {
+    const t = tokenizeForMatch('Houthis attack Red Sea shipping');
+    assert.ok(matchKeyword(t, 'houthi'));
+  });
+
+  it('"missiles" matches keyword "missile" (plural -s)', () => {
+    const t = tokenizeForMatch('Missiles launched from Yemen');
+    assert.ok(matchKeyword(t, 'missile'));
+  });
+
+  it('"drones" matches keyword "drone" (plural -s)', () => {
+    const t = tokenizeForMatch('Drones spotted over base');
+    assert.ok(matchKeyword(t, 'drone'));
+  });
+
+  it('"Ukrainian" matches keyword "ukraine" (demonym -ian)', () => {
+    const t = tokenizeForMatch('Ukrainian forces push forward');
+    assert.ok(matchKeyword(t, 'ukraine'));
+  });
+
+  it('"Iranian" matches keyword "iran" (demonym -ian)', () => {
+    const t = tokenizeForMatch('Iranian senate debates sanctions');
+    assert.ok(matchKeyword(t, 'iran'));
+  });
+
+  it('"Israeli" matches keyword "israel" (demonym -i)', () => {
+    const t = tokenizeForMatch('Israeli military conducts operation');
+    assert.ok(matchKeyword(t, 'israel'));
+  });
+
+  it('"Russian" matches keyword "russia" (demonym -n)', () => {
+    const t = tokenizeForMatch('Russian forces advance');
+    assert.ok(matchKeyword(t, 'russia'));
+  });
+
+  it('"Taiwanese" matches keyword "taiwan" (demonym -ese)', () => {
+    const t = tokenizeForMatch('Taiwanese military drills begin');
+    assert.ok(matchKeyword(t, 'taiwan'));
+  });
+
+  it('suffix matching does NOT cause false positives for unrelated words', () => {
+    const t = tokenizeForMatch('The crisis escalates quickly');
+    assert.ok(!matchKeyword(t, 'cris'));
+    assert.ok(!matchKeyword(t, 'esca'));
+  });
+});
+
 // --- Multi-word phrases ---
 
 describe('multi-word phrase matching', () => {
@@ -277,6 +282,16 @@ describe('integration: hub keyword matching', () => {
     const t = tokenizeForMatch('Syrian refugees seek asylum');
     const matched = findMatchingKeywords(t, damascusKeywords);
     assert.ok(matched.includes('syrian'));
+  });
+
+  it('matches conflict zone keywords with plural forms', () => {
+    const redSeaKeywords = ['houthi', 'red sea', 'yemen', 'missile', 'drone', 'ship'];
+    const t = tokenizeForMatch('Houthis launch missiles at ships in Red Sea');
+    const matched = findMatchingKeywords(t, redSeaKeywords);
+    assert.ok(matched.includes('houthi'));
+    assert.ok(matched.includes('missile'));
+    assert.ok(matched.includes('ship'));
+    assert.ok(matched.includes('red sea'));
   });
 });
 

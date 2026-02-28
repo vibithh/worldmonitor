@@ -3,6 +3,8 @@ export interface TokenizedTitle {
   ordered: string[];
 }
 
+const INFLECTION_SUFFIXES = ['s', 'es', 'ian', 'ean', 'an', 'n', 'i', 'ish', 'ese'];
+
 export function tokenizeForMatch(title: string): TokenizedTitle {
   const lower = title.toLowerCase();
   const words = new Set<string>();
@@ -19,10 +21,34 @@ export function tokenizeForMatch(title: string): TokenizedTitle {
   return { words, ordered };
 }
 
+function hasSuffix(word: string, keyword: string): boolean {
+  if (word.length <= keyword.length) return false;
+  if (word.startsWith(keyword)) {
+    const suffix = word.slice(keyword.length);
+    if (INFLECTION_SUFFIXES.includes(suffix)) return true;
+  }
+  if (keyword.endsWith('e')) {
+    const stem = keyword.slice(0, -1);
+    if (word.length > stem.length && word.startsWith(stem)) {
+      const suffix = word.slice(stem.length);
+      if (INFLECTION_SUFFIXES.includes(suffix)) return true;
+    }
+  }
+  return false;
+}
+
+function matchSingleWord(words: Set<string>, keyword: string): boolean {
+  if (words.has(keyword)) return true;
+  for (const word of words) {
+    if (hasSuffix(word, keyword)) return true;
+  }
+  return false;
+}
+
 export function matchKeyword(tokens: TokenizedTitle, keyword: string): boolean {
   const parts = keyword.toLowerCase().split(/\s+/).filter((w): w is string => w.length > 0);
   if (parts.length === 0) return false;
-  if (parts.length === 1) return tokens.words.has(parts[0]!);
+  if (parts.length === 1) return matchSingleWord(tokens.words, parts[0]!);
   const { ordered } = tokens;
   for (let i = 0; i <= ordered.length - parts.length; i++) {
     let match = true;
