@@ -172,3 +172,57 @@ export async function cachedFetchJsonWithMeta<T extends object>(
   const data = await promise;
   return { data, source: 'fresh' };
 }
+
+export async function geoSearchByBox(
+  key: string, lon: number, lat: number,
+  widthKm: number, heightKm: number, count: number,
+): Promise<string[]> {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return [];
+  try {
+    const pipeline = [
+      ['GEOSEARCH', prefixKey(key), 'FROMLONLAT', String(lon), String(lat),
+       'BYBOX', String(widthKm), String(heightKm), 'km', 'ASC', 'COUNT', String(count)],
+    ];
+    const resp = await fetch(`${url}/pipeline`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(pipeline),
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!resp.ok) return [];
+    const data = (await resp.json()) as Array<{ result?: string[] }>;
+    return data[0]?.result ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getHashFieldsBatch(
+  key: string, fields: string[],
+): Promise<Map<string, string>> {
+  const result = new Map<string, string>();
+  if (fields.length === 0) return result;
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return result;
+  try {
+    const pipeline = [['HMGET', prefixKey(key), ...fields]];
+    const resp = await fetch(`${url}/pipeline`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(pipeline),
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!resp.ok) return result;
+    const data = (await resp.json()) as Array<{ result?: (string | null)[] }>;
+    const values = data[0]?.result;
+    if (values) {
+      for (let i = 0; i < fields.length; i++) {
+        if (values[i]) result.set(fields[i]!, values[i]!);
+      }
+    }
+  } catch { /* best-effort */ }
+  return result;
+}
