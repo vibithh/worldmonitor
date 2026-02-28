@@ -2,6 +2,7 @@ import type { Feed, NewsItem } from '@/types';
 import { SITE_VARIANT } from '@/config';
 import { chunkArray, fetchWithProxy } from '@/utils';
 import { classifyByKeyword, classifyWithAI } from './threat-classifier';
+import { checkBatchForBreakingAlerts } from './breaking-news-alerts';
 import { inferGeoHubsFromTitle } from './geo-hub-index';
 import { getPersistentCache, setPersistentCache } from './persistent-cache';
 import { dataFreshness } from './data-freshness';
@@ -337,8 +338,10 @@ export async function fetchFeed(feed: Feed): Promise<NewsItem[]> {
       if (!canQueueAiClassification(item.title)) continue;
       classifyWithAI(item.title, SITE_VARIANT).then((aiResult) => {
         if (aiResult && aiResult.confidence > item.threat.confidence) {
+          const wasAlert = item.isAlert;
           item.threat = aiResult;
           item.isAlert = aiResult.level === 'critical' || aiResult.level === 'high';
+          if (item.isAlert && !wasAlert) checkBatchForBreakingAlerts([item]);
         }
       }).catch(() => { });
     }
