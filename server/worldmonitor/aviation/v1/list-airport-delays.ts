@@ -28,8 +28,7 @@ const FAA_CACHE_KEY = 'aviation:delays:faa:v1';
 const INTL_CACHE_KEY = 'aviation:delays:intl:v1';
 const INTL_LOCK_KEY = 'aviation:delays:intl:lock';
 const NOTAM_CACHE_KEY = 'aviation:notam:closures:v1';
-const CACHE_TTL = 1800;   // 30 min for both FAA and intl
-const NOTAM_CACHE_TTL = 14400; // 4h — NOTAMs don't change frequently
+const CACHE_TTL = 1800;   // 30 min for FAA, intl, and NOTAM
 const LOCK_TTL = 30;      // 30s lock — enough for AviationStack batch (~8-10s)
 
 export async function listAirportDelays(
@@ -104,7 +103,7 @@ export async function listAirportDelays(
   if (process.env.ICAO_API_KEY) {
     try {
       const notamResult = await cachedFetchJson<{ closedIcaos: string[]; reasons: Record<string, string> }>(
-        NOTAM_CACHE_KEY, NOTAM_CACHE_TTL, async () => {
+        NOTAM_CACHE_KEY, CACHE_TTL, async () => {
           const mena = MONITORED_AIRPORTS.filter(a => a.region === 'mena');
           const result = await fetchNotamClosures(mena);
           const closedIcaos = [...result.closedIcaoCodes];
