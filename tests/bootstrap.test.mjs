@@ -10,10 +10,30 @@ const root = resolve(__dirname, '..');
 describe('Bootstrap cache key registry', () => {
   const cacheKeysPath = join(root, 'server', '_shared', 'cache-keys.ts');
   const cacheKeysSrc = readFileSync(cacheKeysPath, 'utf-8');
+  const bootstrapSrc = readFileSync(join(root, 'api', 'bootstrap.js'), 'utf-8');
 
   it('exports BOOTSTRAP_CACHE_KEYS with at least 10 entries', () => {
     const matches = cacheKeysSrc.match(/^\s+\w+:\s+'[^']+'/gm);
     assert.ok(matches && matches.length >= 10, `Expected ≥10 keys, found ${matches?.length ?? 0}`);
+  });
+
+  it('api/bootstrap.js inlined keys match server/_shared/cache-keys.ts', () => {
+    const extractKeys = (src) => {
+      const re = /(\w+):\s+'([a-z_]+(?::[a-z_-]+)+:v\d+)'/g;
+      const keys = {};
+      let m;
+      while ((m = re.exec(src)) !== null) keys[m[1]] = m[2];
+      return keys;
+    };
+    const canonical = extractKeys(cacheKeysSrc);
+    const inlined = extractKeys(bootstrapSrc);
+    assert.ok(Object.keys(canonical).length >= 10, 'Canonical registry too small');
+    for (const [name, key] of Object.entries(canonical)) {
+      assert.equal(inlined[name], key, `Key '${name}' mismatch: canonical='${key}', inlined='${inlined[name]}'`);
+    }
+    for (const [name, key] of Object.entries(inlined)) {
+      assert.equal(canonical[name], key, `Extra inlined key '${name}' not in canonical registry`);
+    }
   });
 
   it('every cache key matches a handler cache key pattern', () => {
@@ -89,12 +109,13 @@ describe('Bootstrap endpoint (api/bootstrap.js)', () => {
     assert.ok(src.includes("runtime: 'edge'"), 'Missing edge runtime config');
   });
 
-  it('imports BOOTSTRAP_CACHE_KEYS from cache-keys', () => {
-    assert.ok(src.includes('BOOTSTRAP_CACHE_KEYS'), 'Missing BOOTSTRAP_CACHE_KEYS import');
+  it('defines BOOTSTRAP_CACHE_KEYS inline', () => {
+    assert.ok(src.includes('BOOTSTRAP_CACHE_KEYS'), 'Missing BOOTSTRAP_CACHE_KEYS definition');
   });
 
-  it('imports getCachedJsonBatch from redis', () => {
-    assert.ok(src.includes('getCachedJsonBatch'), 'Missing getCachedJsonBatch import');
+  it('defines getCachedJsonBatch inline (self-contained, no server imports)', () => {
+    assert.ok(src.includes('getCachedJsonBatch'), 'Missing getCachedJsonBatch function');
+    assert.ok(!src.includes("from '../server/"), 'Should not import from server/ — Edge Functions cannot resolve cross-directory TS imports');
   });
 
   it('supports optional ?keys= query param for subset filtering', () => {

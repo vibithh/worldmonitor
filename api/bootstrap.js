@@ -1,9 +1,67 @@
 import { getCorsHeaders, isDisallowedOrigin } from './_cors.js';
 import { validateApiKey } from './_api-key.js';
-import { getCachedJsonBatch } from '../server/_shared/redis.ts';
-import { BOOTSTRAP_CACHE_KEYS } from '../server/_shared/cache-keys.ts';
 
 export const config = { runtime: 'edge' };
+
+const BOOTSTRAP_CACHE_KEYS = {
+  earthquakes:      'seismology:earthquakes:v1',
+  outages:          'infra:outages:v1',
+  serviceStatuses:  'infra:service-statuses:v1',
+  sectors:          'market:sectors:v1',
+  etfFlows:         'market:etf-flows:v1',
+  macroSignals:     'economic:macro-signals:v1',
+  bisPolicy:        'economic:bis:policy:v1',
+  bisExchange:      'economic:bis:eer:v1',
+  bisCredit:        'economic:bis:credit:v1',
+  shippingRates:    'supply_chain:shipping:v2',
+  chokepoints:      'supply_chain:chokepoints:v1',
+  minerals:         'supply_chain:minerals:v1',
+  giving:           'giving:summary:v1',
+  climateAnomalies: 'climate:anomalies:v1',
+  wildfires:        'wildfire:fires:v1',
+};
+
+const NEG_SENTINEL = '__WM_NEG__';
+
+function getKeyPrefix() {
+  const env = process.env.VERCEL_ENV;
+  if (!env || env === 'production') return '';
+  const sha = (process.env.VERCEL_GIT_COMMIT_SHA || 'dev').slice(0, 8);
+  return `${env}:${sha}:`;
+}
+
+async function getCachedJsonBatch(keys) {
+  const result = new Map();
+  if (keys.length === 0) return result;
+
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return result;
+
+  const prefix = getKeyPrefix();
+  const prefixKey = (k) => prefix ? `${prefix}${k}` : k;
+
+  const pipeline = keys.map((k) => ['GET', prefixKey(k)]);
+  const resp = await fetch(`${url}/pipeline`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(pipeline),
+    signal: AbortSignal.timeout(3000),
+  });
+  if (!resp.ok) return result;
+
+  const data = await resp.json();
+  for (let i = 0; i < keys.length; i++) {
+    const raw = data[i]?.result;
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed !== NEG_SENTINEL) result.set(keys[i], parsed);
+      } catch { /* skip malformed */ }
+    }
+  }
+  return result;
+}
 
 export default async function handler(req) {
   if (isDisallowedOrigin(req))
@@ -30,10 +88,7 @@ export default async function handler(req) {
 
   let cached;
   try {
-    cached = await Promise.race([
-      getCachedJsonBatch(keys),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000)),
-    ]);
+    cached = await getCachedJsonBatch(keys);
   } catch {
     return new Response(JSON.stringify({ data: {}, missing: names }), {
       status: 200,
