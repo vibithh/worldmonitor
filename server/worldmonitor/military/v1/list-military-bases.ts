@@ -129,7 +129,12 @@ export async function listMilitaryBases(
     if (kindFilter && !VALID_KINDS.has(kindFilter)) return empty;
     if (countryFilter && !COUNTRY_RE.test(countryFilter)) return empty;
 
-    const activeVersion = await getCachedJson('military:bases:active') as string | null;
+    let activeVersion = await getCachedJson('military:bases:active') as string | null;
+    let rawKeys = false;
+    if (!activeVersion) {
+      activeVersion = await getCachedJson('military:bases:active', true) as string | null;
+      rawKeys = true;
+    }
     if (!activeVersion) {
       markNoCacheResponse(ctx.request);
       console.warn('military:bases:active key missing — run seed script');
@@ -157,8 +162,8 @@ export async function listMilitaryBases(
           const dims2 = bboxDimensionsKm(swLat, -180, neLat, neLon);
           const cap = getGeoSearchCap(zoom);
           const [ids1, ids2] = await Promise.all([
-            geoSearchByBox(geoKey, dims1.centerLon, dims1.centerLat, dims1.widthKm, dims1.heightKm, cap),
-            geoSearchByBox(geoKey, dims2.centerLon, dims2.centerLat, dims2.widthKm, dims2.heightKm, cap),
+            geoSearchByBox(geoKey, dims1.centerLon, dims1.centerLat, dims1.widthKm, dims1.heightKm, cap, rawKeys),
+            geoSearchByBox(geoKey, dims2.centerLon, dims2.centerLat, dims2.widthKm, dims2.heightKm, cap, rawKeys),
           ]);
           const seen = new Set<string>();
           allIds = [];
@@ -168,13 +173,13 @@ export async function listMilitaryBases(
         } else {
           const dims = bboxDimensionsKm(swLat, swLon, neLat, neLon);
           const cap = getGeoSearchCap(zoom);
-          allIds = await geoSearchByBox(geoKey, dims.centerLon, dims.centerLat, dims.widthKm, dims.heightKm, cap);
+          allIds = await geoSearchByBox(geoKey, dims.centerLon, dims.centerLat, dims.widthKm, dims.heightKm, cap, rawKeys);
         }
 
         const truncated = allIds.length >= getGeoSearchCap(zoom);
         if (allIds.length === 0) return { bases: [], clusters: [], totalInView: 0, truncated: false };
 
-        const metaMap = await getHashFieldsBatch(metaKey, allIds);
+        const metaMap = await getHashFieldsBatch(metaKey, allIds, rawKeys);
         const bases: MilitaryBaseEntry[] = [];
 
         for (const id of allIds) {

@@ -18,12 +18,13 @@ function prefixKey(key: string): string {
   return `${cachedPrefix}${key}`;
 }
 
-export async function getCachedJson(key: string): Promise<unknown | null> {
+export async function getCachedJson(key: string, raw = false): Promise<unknown | null> {
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
   if (!url || !token) return null;
   try {
-    const resp = await fetch(`${url}/get/${encodeURIComponent(prefixKey(key))}`, {
+    const finalKey = raw ? key : prefixKey(key);
+    const resp = await fetch(`${url}/get/${encodeURIComponent(finalKey)}`, {
       headers: { Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(3_000),
     });
@@ -175,14 +176,15 @@ export async function cachedFetchJsonWithMeta<T extends object>(
 
 export async function geoSearchByBox(
   key: string, lon: number, lat: number,
-  widthKm: number, heightKm: number, count: number,
+  widthKm: number, heightKm: number, count: number, raw = false,
 ): Promise<string[]> {
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
   if (!url || !token) return [];
   try {
+    const finalKey = raw ? key : prefixKey(key);
     const pipeline = [
-      ['GEOSEARCH', prefixKey(key), 'FROMLONLAT', String(lon), String(lat),
+      ['GEOSEARCH', finalKey, 'FROMLONLAT', String(lon), String(lat),
        'BYBOX', String(widthKm), String(heightKm), 'km', 'ASC', 'COUNT', String(count)],
     ];
     const resp = await fetch(`${url}/pipeline`, {
@@ -200,7 +202,7 @@ export async function geoSearchByBox(
 }
 
 export async function getHashFieldsBatch(
-  key: string, fields: string[],
+  key: string, fields: string[], raw = false,
 ): Promise<Map<string, string>> {
   const result = new Map<string, string>();
   if (fields.length === 0) return result;
@@ -208,7 +210,8 @@ export async function getHashFieldsBatch(
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
   if (!url || !token) return result;
   try {
-    const pipeline = [['HMGET', prefixKey(key), ...fields]];
+    const finalKey = raw ? key : prefixKey(key);
+    const pipeline = [['HMGET', finalKey, ...fields]];
     const resp = await fetch(`${url}/pipeline`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
