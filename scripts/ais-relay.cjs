@@ -2249,8 +2249,6 @@ const server = http.createServer(async (req, res) => {
         'feeds.capi24.com',  // News24 redirect destination
         'islandtimes.org',
         'www.atlanticcouncil.org',
-        // RSSHub (NHK, MIIT, MOFCOM)
-        'rsshub.app',
       ];
       const parsed = new URL(feedUrl);
       if (!allowedDomains.includes(parsed.hostname)) {

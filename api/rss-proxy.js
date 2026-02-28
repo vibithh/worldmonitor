@@ -86,7 +86,6 @@ const ALLOWED_DOMAINS = [
   'openai.com',
   'www.reutersagency.com',
   'feeds.reuters.com',
-  'rsshub.app',
   'asia.nikkei.com',
   'www.cfr.org',
   'www.csis.org',
