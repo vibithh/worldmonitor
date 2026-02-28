@@ -9,7 +9,7 @@ import type {
 } from '../../../../src/generated/server/worldmonitor/military/v1/service_server';
 
 import { cachedFetchJson, getCachedJson, geoSearchByBox, getHashFieldsBatch } from '../../../_shared/redis';
-import { markNoCacheResponse } from '../../../_shared/response-headers';
+import { markNoCacheResponse, setResponseHeader } from '../../../_shared/response-headers';
 
 const VALID_TYPES = new Set([
   'us-nato', 'china', 'russia', 'uk', 'france', 'india', 'italy', 'uae', 'turkey', 'japan', 'other',
@@ -137,10 +137,12 @@ export async function listMilitaryBases(
     }
     if (!activeVersion) {
       markNoCacheResponse(ctx.request);
+      setResponseHeader(ctx.request, 'X-Bases-Debug', 'no-active-version');
       console.warn('military:bases:active key missing — run seed script');
       return empty;
     }
     const v = String(activeVersion);
+    setResponseHeader(ctx.request, 'X-Bases-Debug', `v=${v},raw=${rawKeys}`);
     const geoKey = `military:bases:geo:${v}`;
     const metaKey = `military:bases:meta:${v}`;
 
@@ -232,8 +234,9 @@ export async function listMilitaryBases(
       return empty;
     }
     return result;
-  } catch {
+  } catch (err) {
     markNoCacheResponse(ctx.request);
+    setResponseHeader(ctx.request, 'X-Bases-Debug', `error:${err instanceof Error ? err.message : String(err)}`);
     return { bases: [], clusters: [], totalInView: 0, truncated: false };
   }
 }
