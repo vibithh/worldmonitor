@@ -438,6 +438,11 @@ export function ingestOrefForCII(alertCount: number, historyCount24h: number): v
   data.orefHistoryCount24h = historyCount24h;
 }
 
+function getOrefBlendBoost(code: string, data: CountryData): number {
+  if (code !== 'IL') return 0;
+  return (data.orefAlertCount > 0 ? 15 : 0) + (data.orefHistoryCount24h >= 10 ? 10 : data.orefHistoryCount24h >= 3 ? 5 : 0);
+}
+
 function calcUnrestScore(data: CountryData, countryCode: string): number {
   const protestCount = data.protests.length;
   const multiplier = CURATED_COUNTRIES[countryCode]?.eventMultiplier ?? DEFAULT_EVENT_MULTIPLIER;
@@ -644,11 +649,8 @@ export function calculateCII(): CountryScore[] {
       : data.displacementOutflow >= 100_000 ? 4
       : 0;
     const climateBoost = data.climateStress;
-    const orefBlendBoost = code === 'IL'
-      ? (data.orefAlertCount > 0 ? 15 : 0) + (data.orefHistoryCount24h >= 10 ? 10 : data.orefHistoryCount24h >= 3 ? 5 : 0)
-      : 0;
 
-    const blendedScore = baselineRisk * 0.4 + eventScore * 0.6 + hotspotBoost + newsUrgencyBoost + focalBoost + displacementBoost + climateBoost + orefBlendBoost;
+    const blendedScore = baselineRisk * 0.4 + eventScore * 0.6 + hotspotBoost + newsUrgencyBoost + focalBoost + displacementBoost + climateBoost + getOrefBlendBoost(code, data);
 
     const floor = getUcdpFloor(data);
     const score = Math.round(Math.min(100, Math.max(floor, blendedScore)));
@@ -701,10 +703,7 @@ export function getCountryScore(code: string): number | null {
     : data.displacementOutflow >= 100_000 ? 4
     : 0;
   const climateBoost = data.climateStress;
-  const orefBlendBoost = code === 'IL'
-    ? (data.orefAlertCount > 0 ? 15 : 0) + (data.orefHistoryCount24h >= 10 ? 10 : data.orefHistoryCount24h >= 3 ? 5 : 0)
-    : 0;
-  const blendedScore = baselineRisk * 0.4 + eventScore * 0.6 + hotspotBoost + newsUrgencyBoost + focalBoost + displacementBoost + climateBoost + orefBlendBoost;
+  const blendedScore = baselineRisk * 0.4 + eventScore * 0.6 + hotspotBoost + newsUrgencyBoost + focalBoost + displacementBoost + climateBoost + getOrefBlendBoost(code, data);
 
   const floor = getUcdpFloor(data);
   return Math.round(Math.min(100, Math.max(floor, blendedScore)));
